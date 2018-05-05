@@ -1,5 +1,6 @@
 import requests, queue, sys, re, collections, time
 from bs4 import BeautifulSoup
+from urllib.parse import urljoin
 from print import *
 
 q = queue.Queue()
@@ -87,7 +88,7 @@ def isOutgoingLink(url):
 
 def isDisallowedDir(url):
   for dir in disallowedDirs:
-    if re.search(dir, url) or re.search(dir, startingLink + url):
+    if re.search(dir, url) or re.search(dir, urljoin(startingLink, url)):
       return True
 
   return False
@@ -106,7 +107,7 @@ def diff(first, second):
 
 def processLink(url):
   if isRelativeLink(url):
-    url = startingLink + url
+    url = urljoin(startingLink, url)
 
   if url in processedLinks:
     return
@@ -143,17 +144,24 @@ def processLink(url):
   global parsedLinks
   parsedLinks = getDictionaryWithAddedItem(parsedLinks, url)
   plain = response.text
-  prettySoupStr = BeautifulSoup(plain, "html.parser").prettify()
+
+  ogSoup = BeautifulSoup(plain, "html.parser")
+  if ogSoup.script:
+    [s.extract() for s in ogSoup('script')]
+  prettySoupStr = ogSoup.prettify()
   soup = BeautifulSoup(prettySoupStr, "html.parser")
   
   stopwordsFile = ' '.join(sys.argv[2:])
   with open(stopwordsFile) as f:
     stopwords = f.read().splitlines()
 
-  for link in soup.find_all('a'):
-    linkSrc = str(link.get('href'))
-    addtoQueue(linkSrc)
-  
+  for aTag in soup.find_all('a'):
+    linkSrc = str(aTag.get('href'))
+    addtoQueue(urljoin(url, linkSrc))
+  for imgTag in soup.find_all('img'):
+    linkSrc = str(imgTag.get('src'))
+    addtoQueue(urljoin(url, linkSrc))
+
   plainText = soup.get_text().lower()
   duplicateTuplesList = [item for item in documents if item[1] == plainText]
   for tuple in duplicateTuplesList:
@@ -256,7 +264,7 @@ print("\n")
 
 print("Parsing status: ")
 if q.empty():
-  print("Parsed entire website, not limited by user-defined number of pages to retrieve\n")
+  print("Parsed entire website, not limited by user-defined number of pages to retrieve, number of links evaluated: " + str(linkIndex) + "\n")
 else:
   print("Did not parse entire website, limited by user-defined number of pages to retrieve, consider increasing the input, number of pages remaining: " + str(q.qsize()) + "\n")
   while(not q.empty()):
