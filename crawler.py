@@ -28,18 +28,21 @@ allWords = {}
 def readRobotsTxt():
   result = requests.get(startingLink + "robots.txt", headers=headers)
   plain = result.text
-  
-  uaIndex = plain.find("User-agent:")
-  if uaIndex == -1:
-    return
-  
-  allowedUserAgent = plain[uaIndex+12 : uaIndex+13]
-  if allowedUserAgent != "*" and allowedUserAgent != myUserAgent:
-    return
-  
-  disallowedIndex = plain.find("Disallow: ", uaIndex) + 10
-  endDisallowedIndex = re.search(r"\s", plain[disallowedIndex:]).start() + disallowedIndex
-  disallowedDirs.append(plain[disallowedIndex:endDisallowedIndex])
+
+  lines = plain.split("\n")
+
+  allowed = False
+  for line in lines:
+    if line[0] == "#":
+      continue
+    if(line[0:11] == "User-agent:"):
+      userAgent = line[11:].strip()
+      if userAgent == "*" or userAgent == myUserAgent:
+        allowed = True
+      else:
+        allowed = False
+    elif line[0:9] == "Disallow:" and allowed == True:
+      disallowedDirs.append(line[9:].strip())
 
 def getDictionaryWithAddedItem(theDictionary, newItem):
   if newItem in theDictionary:
@@ -106,6 +109,7 @@ def processLink(url, linkIndex):
   processedLinks.append(url)
 
   if isDisallowedDir(url):
+    global disallowedLinks
     disallowedLinks = getDictionaryWithAddedItem(disallowedLinks, url)
     return
 
@@ -168,7 +172,7 @@ def getDocumentFreq(token):
   return freq
 
 def printMatrix():
-  print("Term-Document Frequency Matrix")
+  print("Term-Document Frequency Matrix:")
   print("Word\t\t\t\t\t\t", end="")
   for docIndex in documentIndicies:
     print("Doc #", docIndex, sep="", end="\t")
@@ -191,7 +195,7 @@ def printMatrix():
         print("0", end='\t')
 
 def printTopTwenty():
-  print("\nTop 20 Tokens")
+  print("\nTop 20 Tokens:")
   print("Token\t\tCollectionFreq\tDocumentFreq")
   d = collections.Counter(allWords)
   d.most_common()
@@ -209,13 +213,11 @@ print("*************************************\n")
 
 print("\nLoading...\n\n")
 
-maxNumLinks = int(sys.argv[1])
-addtoQueue(startingLink)
-parsedLinks = getDictionaryWithAddedItem(parsedLinks, startingLink)
-linkIndex = 0
-
 readRobotsTxt()
 
+maxNumLinks = int(sys.argv[1])
+addtoQueue(startingLink)
+linkIndex = 0
 while(not q.empty() and linkIndex < maxNumLinks):
   processLink(q.get(), linkIndex)
   linkIndex += 1
