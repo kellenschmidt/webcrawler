@@ -65,13 +65,9 @@ def addtoQueue(newLink):
     q.put(newLink)
 
 def isRelativeLink(url):
-  try:
-    result = requests.get(startingLink + url, headers=headers)
-    if result.status_code == 200:
-      return True
-    else:
-      return False
-  except Exception:
+  if url[0:4] != "http":
+    return True
+  else:
     return False
 
 def isGraphicLink(url):
@@ -79,6 +75,12 @@ def isGraphicLink(url):
   suffix = url[lastDot+1:]
 
   if suffix in graphicExtensions:
+    return True
+  else:
+    return False
+
+def isOutgoingLink(url):
+  if not re.search(r"https?://(lyle|s2).smu.edu/~fmoore", url):
     return True
   else:
     return False
@@ -103,40 +105,44 @@ def diff(first, second):
   return [item for item in first if item not in second]
 
 def processLink(url):
+  if isRelativeLink(url):
+    url = startingLink + url
+
   if url in processedLinks:
     return
-
-  processedLinks.append(url)
+  else:
+    processedLinks.append(url)
 
   if isDisallowedDir(url):
     global disallowedLinks
     disallowedLinks = getDictionaryWithAddedItem(disallowedLinks, url)
     return
 
+  if isOutgoingLink(url):
+    global outgoingLinks
+    outgoingLinks = getDictionaryWithAddedItem(outgoingLinks, url)
+    return
+
   try:
-    code = requests.get(url, headers=headers)
+    response = requests.get(url, headers=headers, timeout=5.0)
+    statusCode = response.status_code
   except Exception:
-    if isRelativeLink(url):
-      url = startingLink + url
-      code = requests.get(url, headers=headers)
-    else:
-      global badLinks
-      badLinks = getDictionaryWithAddedItem(badLinks, url)
-      return
+    global badLinks
+    badLinks = getDictionaryWithAddedItem(badLinks, url)
+    return
+
+  if statusCode != 200:
+    badLinks = getDictionaryWithAddedItem(badLinks, url)
+    return
 
   if isGraphicLink(url):
     global graphicLinks
     graphicLinks = getDictionaryWithAddedItem(graphicLinks, url)
     return
 
-  if not re.search(r"https?://(lyle|s2).smu.edu/~fmoore", url):
-    global outgoingLinks
-    outgoingLinks = getDictionaryWithAddedItem(outgoingLinks, url)
-    return
-    
   global parsedLinks
   parsedLinks = getDictionaryWithAddedItem(parsedLinks, url)
-  plain = code.text
+  plain = response.text
   prettySoupStr = BeautifulSoup(plain, "html.parser").prettify()
   soup = BeautifulSoup(prettySoupStr, "html.parser")
   
