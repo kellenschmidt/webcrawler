@@ -1,11 +1,12 @@
 import requests, queue, sys, re, collections, time
 from bs4 import BeautifulSoup
+from print import *
 
 q = queue.Queue()
 parsedLinks = {}
 outgoingLinks = {}
 disallowedLinks = {}
-badLinks = []
+badLinks = {}
 graphicLinks = {}
 processedLinks = []
 duplicateContent = []
@@ -13,9 +14,9 @@ disallowedDirs = []
 graphicExtensions = ["gif", "jpg", "jpeg", "png", "pdf", "xlsx"]
 textExtensions = ["htm", "html", "txt", "php"]
 startingLink = 'http://lyle.smu.edu/~fmoore/'
-myUserAgent = "Kellen's Web Crawler 1.0"
+myUserAgent = "Kellen's Web Crawler 2.0"
 headers = {
-    "User-Agent": myUserAgent
+  "User-Agent": myUserAgent
 }
 documents = []
 documentIndicies = []
@@ -40,73 +41,19 @@ def readRobotsTxt():
   endDisallowedIndex = re.search(r"\s", plain[disallowedIndex:]).start() + disallowedIndex
   disallowedDirs.append(plain[disallowedIndex:endDisallowedIndex])
 
-def printList(myList):
-  if len(myList) == 0:
-    print("None")
-  for item in range(len(myList)):
-    print(myList[item])
-
-def printDict(dictionary):
-  if len(dictionary) == 0:
-    print("None")
-  for item in dictionary:
-    print(item, ": ", str(dictionary.get(item)))
-
-def printTupleList(tupleList):
-  if len(tupleList) == 0:
-    print("None")
-  for tuple in tupleList:
-    print(tuple[0])
-
-def addToOutgoingLinks(newLink):
-  if newLink in outgoingLinks:
-    newCount = outgoingLinks.get(newLink) + 1
+def getDictionaryWithAddedItem(theDictionary, newItem):
+  if newItem in theDictionary:
+    newCount = theDictionary.get(newItem) + 1
   else:
     newCount = 1
-  
-  outgoingLinks.update({newLink: newCount})
 
-def addToParsedLinks(newLink):
-  if newLink in parsedLinks:
-    newCount = parsedLinks.get(newLink) + 1
-  else:
-    newCount = 1
-  
-  parsedLinks.update({newLink: newCount})
-
-def addToDisallowedLinks(newLink):
-  if newLink in disallowedLinks:
-    newCount = disallowedLinks.get(newLink) + 1
-  else:
-    newCount = 1
-  
-  disallowedLinks.update({newLink: newCount})
-
-def addToGraphicLinks(newLink):
-  if newLink in graphicLinks:
-    newCount = graphicLinks.get(newLink) + 1
-  else:
-    newCount = 1
-  
-  graphicLinks.update({newLink: newCount})
-
-def addToAllWords(token):
-  if token in allWords:
-    newCount = allWords.get(token) + 1
-  else:
-    newCount = 1
-  
-  allWords.update({token: newCount})
+  theDictionary.update({newItem: newCount})
+  return theDictionary
 
 def createTokensDict(list):
   newDict = {}
   for item in list:
-    if item in newDict:
-      newCount = newDict.get(item) + 1
-    else:
-      newCount = 1
-    
-    newDict.update({item: newCount})
+    newDict = getDictionaryWithAddedItem(newDict, item)
 
   return newDict
 
@@ -159,7 +106,7 @@ def processLink(url, linkIndex):
   processedLinks.append(url)
 
   if isDisallowedDir(url):
-    addToDisallowedLinks(url)
+    disallowedLinks = getDictionaryWithAddedItem(disallowedLinks, url)
     return
 
   try:
@@ -169,18 +116,22 @@ def processLink(url, linkIndex):
       url = startingLink + url
       code = requests.get(url, headers=headers)
     else:
-      badLinks.append(url)
+      global badLinks
+      badLinks = getDictionaryWithAddedItem(badLinks, url)
       return
 
   if isGraphicLink(url):
-    addToGraphicLinks(url)
+    global graphicLinks
+    graphicLinks = getDictionaryWithAddedItem(graphicLinks, url)
     return
 
   if not re.search(r"https?://(lyle|s2).smu.edu/~fmoore", url):
-    addToOutgoingLinks(url)
+    global outgoingLinks
+    outgoingLinks = getDictionaryWithAddedItem(outgoingLinks, url)
     return
     
-  addToParsedLinks(url)
+  global parsedLinks
+  parsedLinks = getDictionaryWithAddedItem(parsedLinks, url)
   plain = code.text
   s = BeautifulSoup(plain, "html.parser")
   
@@ -206,7 +157,8 @@ def processLink(url, linkIndex):
   index.update({linkIndex: createTokensDict(filteredTokens)})
   documentIndicies.append(linkIndex)
   for token in filteredTokens:
-    addToAllWords(token)
+    global allWords
+    allWords = getDictionaryWithAddedItem(allWords, token)
 
 def getDocumentFreq(token):
   freq = 0
@@ -255,9 +207,11 @@ print("\n*************************************")
 print("*       Kellen's Web Crawler        *")
 print("*************************************\n")
 
+print("\nLoading...\n\n")
+
 maxNumLinks = int(sys.argv[1])
 addtoQueue(startingLink)
-addToParsedLinks(startingLink)
+parsedLinks = getDictionaryWithAddedItem(parsedLinks, startingLink)
 linkIndex = 0
 
 readRobotsTxt()
@@ -265,12 +219,12 @@ readRobotsTxt()
 while(not q.empty() and linkIndex < maxNumLinks):
   processLink(q.get(), linkIndex)
   linkIndex += 1
-  time.sleep(5)
+  # time.sleep(5)
 
 # Output
 
 print("\nBad links: ")
-printList(badLinks)
+printDict(badLinks)
 print("\nOutgoing links: ")
 printDict(outgoingLinks)
 print("\nGraphic Links: ")
