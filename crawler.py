@@ -21,6 +21,7 @@ headers = {
 }
 documents = []
 documentIndicies = []
+documentTitles = []
 index = {}
 allWords = {}
 
@@ -146,9 +147,12 @@ def processLink(url):
   plain = response.text
 
   ogSoup = BeautifulSoup(plain, "html.parser")
-  if ogSoup.script:
-    [s.extract() for s in ogSoup('script')]
-  prettySoupStr = ogSoup.prettify()
+  ogSoupBody = ogSoup
+  if ogSoup.body:
+    ogSoupBody = ogSoup.body
+  if ogSoupBody.script:
+    [s.extract() for s in ogSoupBody('script')]
+  prettySoupStr = ogSoupBody.prettify()
   soup = BeautifulSoup(prettySoupStr, "html.parser")
   
   stopwordsFile = ' '.join(sys.argv[2:])
@@ -168,7 +172,7 @@ def processLink(url):
     duplicateContent.append((url, tuple[0]))
   if len(duplicateTuplesList) == 0:
     documents.append((url, plainText))
-    
+
   unfilteredTokens = plainText.split()
   withoutNonwords = removeNonwords(unfilteredTokens)
   filteredTokens = diff(withoutNonwords, stopwords)
@@ -176,6 +180,11 @@ def processLink(url):
   linkIndex = len(parsedLinks)
   index.update({linkIndex: createTokensDict(filteredTokens)})
   documentIndicies.append(linkIndex)
+  if(ogSoup.title):
+    documentTitles.append(ogSoup.title.string)
+  else:
+    documentTitles.append(url)
+
   for token in filteredTokens:
     global allWords
     allWords = getDictionaryWithAddedItem(allWords, token)
@@ -203,7 +212,7 @@ def printMatrix():
     elif len(word) < 32:
       print("", end="\t\t")
     elif len(word) < 40:
-      print("", end="\t\t")
+      print("", end="\t")
     for docIndex in documentIndicies:
       if index.get(docIndex).get(word):
         print(index.get(docIndex).get(word), end='\t')
@@ -241,16 +250,18 @@ while(not q.empty() and linkIndex < maxNumLinks):
 
 # Output
 
-print("\nBad links: ")
+print("\nBad links:")
 printDict(badLinks)
-print("\nOutgoing links: ")
+print("\nOutgoing links:")
 printDict(outgoingLinks)
-print("\nGraphic Links: ")
+print("\nGraphic Links:")
 printDict(graphicLinks)
-print("\nIgnored Links: ")
+print("\nIgnored Links:")
 printDict(disallowedLinks)
-print("\nParsed links: ")
+print("\nParsed links:")
 printDict(parsedLinks)
+print("\nTitles:")
+printList(documentTitles)
 # print("\nAll links: ")
 # printList(processedLinks)
 print("\nDuplicate content: ")
