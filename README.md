@@ -7,12 +7,12 @@
 
 ### Usage
 ```
-python crawler.py <depth> <stopwords_file>
+python crawler.py
 ```
 
-`depth` is the number of links to evaluate (Max of ~60 in my testing)
+`depth`: automatically set to 109 (enough to crawl entire website)
 
-`stopwords_file` is a text file containing the stopwords to ignore
+`stopwords_file`: automatically set to `/stopwords.txt`
 
 ## Project 2 Responses
 

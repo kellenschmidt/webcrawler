@@ -155,7 +155,7 @@ def processLink(url):
   prettySoupStr = ogSoupBody.prettify()
   soup = BeautifulSoup(prettySoupStr, "html.parser")
   
-  stopwordsFile = ' '.join(sys.argv[2:])
+  stopwordsFile = "stopwords.txt"
   with open(stopwordsFile) as f:
     stopwords = f.read().splitlines()
 
@@ -218,9 +218,10 @@ def printMatrix():
         print(index.get(docIndex).get(word), end='\t')
       else:
         print("0", end='\t')
+  print()
 
 def printTopTwenty():
-  print("\nTop 20 Tokens:")
+  print("Top 20 Tokens:")
   print("Token\t\tCollectionFreq\tDocumentFreq")
   d = collections.Counter(allWords)
   d.most_common()
@@ -232,51 +233,68 @@ def printTopTwenty():
 
 # Main
 
-print("\n*************************************")
-print("*       Kellen's Web Crawler        *")
-print("*************************************\n")
-
-print("\nLoading...\n\n")
+print("\n\nLoading...\n\n")
 
 readRobotsTxt()
 
-maxNumLinks = int(sys.argv[1])
 addtoQueue(startingLink)
 linkIndex = 0
-while(not q.empty() and linkIndex < maxNumLinks):
+while(not q.empty() and linkIndex < 109):
   processLink(q.get())
   linkIndex += 1
   # time.sleep(5)
 
-# Output
+print("Finished loading!!!\n\n\n")
 
-print("\nBad links:")
-printDict(badLinks)
-print("\nOutgoing links:")
-printDict(outgoingLinks)
-print("\nGraphic Links:")
-printDict(graphicLinks)
-print("\nIgnored Links:")
-printDict(disallowedLinks)
-print("\nParsed links:")
-printDict(parsedLinks)
-print("\nTitles:")
-printList(documentTitles)
-# print("\nAll links: ")
-# printList(processedLinks)
-print("\nDuplicate content: ")
-printTupleList(duplicateContent)
+print("******************************************************")
+print("*       Kellen's Web Crawler and Search Engine       *")
+print("******************************************************")
 
-printTopTwenty()
+userQuery = ""
+while(userQuery != "stop"):
+  print("\n------------------------------------------------------------------------\n")
+  print("Optional commands (case insensitive):")
+  print("\"Stop\" - Exit the program")
+  print("\"Stats\" - List information about the links")
+  print("\"Top 20\" - View the top 20 most common words")
+  print("\"Matrix\" - Display the term-document frequency matrix")
+  print("\"Status\" - Determine whether the whole site has been parsed or not")
+  print("\nEnter your query: " , end='')
+  userQuery = input()
+  print("\n------------------------------------------------------------------------\n")
 
-print("\n")
-printMatrix()
-print("\n")
-
-print("Parsing status: ")
-if q.empty():
-  print("Parsed entire website, not limited by user-defined number of pages to retrieve, number of links evaluated: " + str(linkIndex) + "\n")
-else:
-  print("Did not parse entire website, limited by user-defined number of pages to retrieve, consider increasing the input, number of pages remaining: " + str(q.qsize()) + "\n")
-  while(not q.empty()):
-    print(q.get())
+  if userQuery.lower() == "stop":
+    print("Goodbye!\n")
+    break
+  elif userQuery.lower() == "stats":
+    print("Bad links:")
+    printDict(badLinks)
+    print("\nOutgoing links:")
+    printDict(outgoingLinks)
+    print("\nGraphic Links:")
+    printDict(graphicLinks)
+    print("\nIgnored Links:")
+    printDict(disallowedLinks)
+    print("\nParsed links:")
+    printDict(parsedLinks)
+    print("\nTitles:")
+    printList(documentTitles)
+    # print("\nAll links: ")
+    # printList(processedLinks)
+    print("\nDuplicate content: ")
+    printTupleList(duplicateContent)
+  elif userQuery.lower() == "top 20":
+    printTopTwenty()
+  elif userQuery.lower() == "matrix":
+    printMatrix()
+  elif userQuery.lower() == "status":
+    print("Parsing status: ")
+    if q.empty():
+      print("Parsed entire website, not limited by user-defined number of pages to retrieve, number of links evaluated: " + str(linkIndex))
+    else:
+      print("Did not parse entire website, limited by user-defined number of pages to retrieve, consider increasing the input, number of pages remaining: " + str(q.qsize()))
+      while(not q.empty()):
+        print(q.get())
+  else:
+    print("\nSearching...\n")
+    print("\nSorry, no results :(")
