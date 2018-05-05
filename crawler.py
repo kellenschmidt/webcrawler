@@ -26,7 +26,7 @@ allWords = {}
 # Functions
 
 def readRobotsTxt():
-  result = requests.get(startingLink + "robots.txt", headers=headers)
+  result = requests.get(startingLink + "robots.txt", headers=headers, timeout=5.0)
   plain = result.text
 
   lines = plain.split("\n")
@@ -102,7 +102,7 @@ def diff(first, second):
   second = set(second)
   return [item for item in first if item not in second]
 
-def processLink(url, linkIndex):
+def processLink(url):
   if url in processedLinks:
     return
 
@@ -137,17 +137,18 @@ def processLink(url, linkIndex):
   global parsedLinks
   parsedLinks = getDictionaryWithAddedItem(parsedLinks, url)
   plain = code.text
-  s = BeautifulSoup(plain, "html.parser")
+  prettySoupStr = BeautifulSoup(plain, "html.parser").prettify()
+  soup = BeautifulSoup(prettySoupStr, "html.parser")
   
   stopwordsFile = ' '.join(sys.argv[2:])
   with open(stopwordsFile) as f:
     stopwords = f.read().splitlines()
 
-  for link in s.find_all('a'):
+  for link in soup.find_all('a'):
     linkSrc = str(link.get('href'))
     addtoQueue(linkSrc)
   
-  plainText = s.get_text().lower()
+  plainText = soup.get_text().lower()
   duplicateTuplesList = [item for item in documents if item[1] == plainText]
   for tuple in duplicateTuplesList:
     duplicateContent.append((url, tuple[0]))
@@ -158,6 +159,7 @@ def processLink(url, linkIndex):
   withoutNonwords = removeNonwords(unfilteredTokens)
   filteredTokens = diff(withoutNonwords, stopwords)
 
+  linkIndex = len(parsedLinks)
   index.update({linkIndex: createTokensDict(filteredTokens)})
   documentIndicies.append(linkIndex)
   for token in filteredTokens:
@@ -219,7 +221,7 @@ maxNumLinks = int(sys.argv[1])
 addtoQueue(startingLink)
 linkIndex = 0
 while(not q.empty() and linkIndex < maxNumLinks):
-  processLink(q.get(), linkIndex)
+  processLink(q.get())
   linkIndex += 1
   # time.sleep(5)
 
@@ -245,3 +247,11 @@ printTopTwenty()
 print("\n")
 printMatrix()
 print("\n")
+
+print("Parsing status: ")
+if q.empty():
+  print("Parsed entire website, not limited by user-defined number of pages to retrieve\n")
+else:
+  print("Did not parse entire website, limited by user-defined number of pages to retrieve, consider increasing the input, number of pages remaining: " + str(q.qsize()) + "\n")
+  while(not q.empty()):
+    print(q.get())
