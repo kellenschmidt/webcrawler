@@ -24,6 +24,7 @@ documentIndicies = []
 documentTitles = []
 index = {}
 allWords = {}
+stopwords = []
 
 # Functions
 
@@ -157,6 +158,7 @@ def processLink(url):
   
   stopwordsFile = "stopwords.txt"
   with open(stopwordsFile) as f:
+    global stopwords
     stopwords = f.read().splitlines()
 
   for aTag in soup.find_all('a'):
@@ -224,12 +226,41 @@ def printTopTwenty():
   print("Top 20 Tokens:")
   print("Token\t\tCollectionFreq\tDocumentFreq")
   d = collections.Counter(allWords)
-  d.most_common()
   for k, v in d.most_common(20):
     print(k, end="\t")
     if len(k) < 8:
       print("\t", end="")
     print(v, getDocumentFreq(k), sep="\t\t")
+
+def isInvalidTerm(term):
+  if term[len(term)-1].isalnum() and term[0].isalpha():
+    return False
+  else:
+    return True
+
+def handleQuery(queryStr):
+  queryTerms = queryStr.split()
+  stopwordsInQuery = []
+  for term in queryTerms:
+    if isInvalidTerm(term):
+      print("Error: Invalid query, " + term + " is not a valid query term")
+      return
+    elif term in stopwords:
+      stopwordsInQuery.append(term)
+  
+  if len(stopwordsInQuery) == len(queryTerms):
+    print("Error: Invalid query, all terms are stopwords")
+    return
+  elif len(stopwordsInQuery) > 0:
+    print("Warning: The following terms were ignored because they are stopwords:")
+    printList(stopwordsInQuery)
+    queryTerms = diff(queryTerms, stopwordsInQuery)
+
+  # Calculate all cosine similarities
+  print("\n\nEvaluating query...\n")
+  printList(queryTerms)
+
+
 
 # Main
 
@@ -261,12 +292,13 @@ while(userQuery != "stop"):
   print("\"Status\" - Determine whether the whole site has been parsed or not")
   print("\nEnter your query: " , end='')
   userQuery = input()
+  userQuery = userQuery.lower()
   print("\n------------------------------------------------------------------------\n")
 
-  if userQuery.lower() == "stop":
+  if userQuery == "stop":
     print("Goodbye!\n")
     break
-  elif userQuery.lower() == "stats":
+  elif userQuery == "stats":
     print("Bad links:")
     printDict(badLinks)
     print("\nOutgoing links:")
@@ -283,11 +315,11 @@ while(userQuery != "stop"):
     # printList(processedLinks)
     print("\nDuplicate content: ")
     printTupleList(duplicateContent)
-  elif userQuery.lower() == "top 20":
+  elif userQuery == "top 20":
     printTopTwenty()
-  elif userQuery.lower() == "matrix":
+  elif userQuery == "matrix":
     printMatrix()
-  elif userQuery.lower() == "status":
+  elif userQuery == "status":
     print("Parsing status: ")
     if q.empty():
       print("Parsed entire website, not limited by user-defined number of pages to retrieve, number of links evaluated: " + str(linkIndex))
@@ -296,5 +328,5 @@ while(userQuery != "stop"):
       while(not q.empty()):
         print(q.get())
   else:
-    print("\nSearching...\n")
+    handleQuery(userQuery)
     print("\nSorry, no results :(")

@@ -18,23 +18,29 @@ python crawler.py
 
 1. What was changed to support the second half of the project?
 
-- 
+- To save the titles of every document I:
+  - Added an array of strings to contain document titles
+  - Added added logic to read the title html element if it exists or the page url if it doesn't and set that to the page title
+  - ...
 
 2. How did you determine the leaders? Do you agree with the clustering? Is 5 reasonable?
 
--
+- ...
 
 3. What happens if a user enters a word that is not in the dictionary? What happens if a user enters a stop word?
 
--
+- If the user enters a query which is all stopwords then no search is executed, an error message is shown, and the user is asked to try a new query
+- If the user enters a query which is mix of stopwords and valid terms then a warning is shown and the query is executed with the stopword(s) removed
+- If the user enters a non-word term (ex. 123-abc) then an error message is shown and the user is asked to try a new query
+- If the user enters a word that is not in the dictionary then...
 
 4. What document/query weighting scheme did you implement?
 
--
+- The cosine similarity weighting scheme that I implemented was LTC.LTC
 
-5.	Explain why you believe the results are correct
+5. Explain why you believe the results are correct
 
--
+- ...
 
 ## Implementation Details
 
