@@ -1,7 +1,10 @@
 import requests, queue, sys, re, collections, time
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
+
 from print import *
+from document import Document
+from term import Term
 
 q = queue.Queue()
 parsedLinks = {}
@@ -22,9 +25,9 @@ headers = {
 documents = []
 documentIndicies = []
 documentTitles = []
-index = {}
 allWords = {}
 stopwords = []
+documentObjects = []
 
 # Functions
 
@@ -180,29 +183,35 @@ def processLink(url):
   filteredTokens = diff(withoutNonwords, stopwords)
 
   linkIndex = len(parsedLinks)
-  index.update({linkIndex: createTokensDict(filteredTokens)})
   documentIndicies.append(linkIndex)
+  docTitle = ""
   if(ogSoup.title):
-    documentTitles.append(ogSoup.title.string)
+    docTitle = ogSoup.title.string
   else:
-    documentTitles.append(url)
+    docTitle = url
 
   for token in filteredTokens:
     global allWords
     allWords = getDictionaryWithAddedItem(allWords, token)
 
-def getDocumentFreq(token):
+  newDocumentObject = Document(linkIndex, docTitle, plainText, filteredTokens, url)
+  documentObjects.append(newDocumentObject)
+
+def getDocumentFreq(word):
   freq = 0
-  for docIndex in documentIndicies:
-    if index.get(docIndex).get(token):
-      freq = freq + 1
+  for document in documentObjects:
+    for term in document.terms:
+        if term.text == word:
+          freq = freq + 1
+          break
+
   return freq
 
 def printMatrix():
   print("Term-Document Frequency Matrix:")
   print("Word\t\t\t\t\t\t", end="")
-  for docIndex in documentIndicies:
-    print("Doc #", docIndex, sep="", end="\t")
+  for document in documentObjects:
+    print("Doc #", document.id, sep="", end="\t")
   for word in allWords:
     print("\n", word, sep="", end='\t')
     if len(word) < 8:
@@ -215,10 +224,13 @@ def printMatrix():
       print("", end="\t\t")
     elif len(word) < 40:
       print("", end="\t")
-    for docIndex in documentIndicies:
-      if index.get(docIndex).get(word):
-        print(index.get(docIndex).get(word), end='\t')
-      else:
+    for document in documentObjects:
+      termFound = False
+      for term in document.terms:
+        if term.text == word:
+          print(term.count, end='\t')
+          termFound = True
+      if not termFound:
         print("0", end='\t')
   print()
 
@@ -327,6 +339,8 @@ while(userQuery != "stop"):
       print("Did not parse entire website, limited by user-defined number of pages to retrieve, consider increasing the input, number of pages remaining: " + str(q.qsize()))
       while(not q.empty()):
         print(q.get())
+  elif userQuery == "obj":
+    print(documentObjects)
   else:
     handleQuery(userQuery)
     print("\nSorry, no results :(")
