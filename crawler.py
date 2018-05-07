@@ -150,7 +150,7 @@ def processLink(url):
   for document in documents:
     if document.text == plainText:
       links.update({url: "duplicate"})
-      break
+      return
 
   unfilteredTokens = plainText.split()
   withoutNonwords = removeNonwords(unfilteredTokens)
@@ -249,6 +249,7 @@ def handleQuery(queryStr):
   elif len(stopwordsInQuery) > 0:
     print("Warning: The following terms were ignored because they are stopwords:")
     printList(stopwordsInQuery)
+    print()
     queryTerms = diff(queryTerms, stopwordsInQuery)
 
   # Calculate all cosine similarities
@@ -313,9 +314,9 @@ def getDocumentById(id):
   return Document()
 
 def getTextSummaryString(textStr):
-  textAsTokens = textStr.split()[:20]
+  textAsTokens = textStr.split()
   showElipsis = "..." if len(textAsTokens) > 20 else ""
-  return ' '.join(textAsTokens) + showElipsis
+  return ' '.join(textAsTokens[:20]) + showElipsis
 
 
 def printTopDocuments():
@@ -347,14 +348,14 @@ print("\n\nLoading...\n\n")
 
 readRobotsTxt()
 
-# addtoQueue(startingLink)
-addtoQueue("http://s2.smu.edu/~fmoore/textfiles/mary1.txt")
-addtoQueue("http://s2.smu.edu/~fmoore/textfiles/mary2.txt")
-addtoQueue("http://s2.smu.edu/~fmoore/textfiles/mary3.txt")
-addtoQueue("http://s2.smu.edu/~fmoore/textfiles/mary4.txt")
+addtoQueue(startingLink)
+# addtoQueue("http://s2.smu.edu/~fmoore/textfiles/mary1.txt")
+# addtoQueue("http://s2.smu.edu/~fmoore/textfiles/mary2.txt")
+# addtoQueue("http://s2.smu.edu/~fmoore/textfiles/mary3.txt")
+# addtoQueue("http://s2.smu.edu/~fmoore/textfiles/mary4.txt")
 
 linkIndex = 0
-while(not q.empty() and linkIndex < 4):
+while(not q.empty() and linkIndex < 100):
   processLink(q.get())
   linkIndex += 1
   # time.sleep(5)
@@ -380,7 +381,7 @@ while(userQuery != "stop"):
   print("\n------------------------------------------------------------------------\n")
 
   if userQuery == "stop":
-    print("Goodbye!\n")
+    print("Goodbye!\n\n")
     break
   elif userQuery == "stats":
     print("Bad links:")
