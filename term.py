@@ -5,8 +5,8 @@ class Term:
   def __init__(self, text, count):
     self.text = text
     self.count = count
-    self.tfIdf = 0
-    self.similarity = 0
+    self.tfIdf = 0.0
+    self.similarity = 0.0
 
   def __repr__(self):
     return("text: " + self.text

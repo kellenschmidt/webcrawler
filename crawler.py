@@ -302,6 +302,8 @@ def handleQuery(queryStr):
   for document in documents:
     print("Doc #" + str(document.id))
     document.setTotalSimilarity(queryDocument.terms)
+    document.addTitleBonus(queryDocument.terms)
+    print(document)
 
 # Main
 

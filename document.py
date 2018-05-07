@@ -9,8 +9,8 @@ class Document:
     self.text = text
     self.terms = []
     self.url = url
-    self.totalTfIdf = 0
-    self.totalSimilarity = 0
+    self.totalTfIdf = 0.0
+    self.totalSimilarity = 0.0
 
     for termText in terms:
       self.addToTerms(termText)
@@ -57,6 +57,13 @@ class Document:
 
     self.totalSimilarity = sumOfProducts
     print("Total similarity: " + str(self.totalSimilarity))
+
+  def addTitleBonus(self, queryTerms):
+    for term in queryTerms:
+      if self.title.lower().find(term.text) != -1:
+        print("Bonus for doc #", self.id)
+        self.totalSimilarity += 0.25
+        return
 
   def __repr__(self):
     return("\nid: " + str(self.id)
