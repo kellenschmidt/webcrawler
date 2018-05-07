@@ -19,7 +19,10 @@ python crawler.py
 1. What was changed to support the second half of the project?
 
 - To save the titles of every document I:
-  - Added an array of strings to contain document titles
+  - Create classes for Document and Term to store all of the information about documents and terms
+    - Document contains the page's ID, text, title, url, and array of terms
+    - Term contains a word's, text, count, tf-idf, and normalized tf-idf with respect to the document it's found in
+  - Restructured the application to save and re
   - Added added logic to read the title html element if it exists or the page url if it doesn't and set that to the page title
   - ...
 
@@ -64,9 +67,7 @@ python crawler.py
     }
   }
   ```
-
-- `documentIndicies`: List of all of the unique document indexes
-- `documents`: List of tuples containing the url and text content of every link that has been parsed
+- `documents`: 
 - `allWords`: Dictionary of every word that has been parsed, associated with its collection frequency
 - `q`: Queue of urls that have been found and are candidates for crawling
 

@@ -1,10 +1,10 @@
-import requests, queue, sys, re, collections, time
+import requests, queue, sys, re, collections, time, math
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
 
 from print import *
 from document import Document
-from term import Term
+# from term import Term
 
 q = queue.Queue()
 graphicExtensions = ["gif", "jpg", "jpeg", "png", "pdf", "xlsx"]
@@ -178,6 +178,13 @@ def getDocumentFreq(word):
 
   return freq
 
+def getDocumentByWord(word):
+  for document in documents:
+    if document.text == word:
+      return document
+  
+  return Document()
+
 def printMatrix():
   print("Term-Document Frequency Matrix:")
   print("Word\t\t\t\t\t\t", end="")
@@ -248,7 +255,53 @@ def handleQuery(queryStr):
   print("\n\nEvaluating query...\n")
   printList(queryTerms)
 
+  # Calculate IDFs
+  idfs = {}
+  numDocuments = float(len(documents))
+  print("numDocuments: " + str(numDocuments))
+  for word in allWords:
+    print("DocFreq: " + str(getDocumentFreq(word)))
+    idf = math.log10(numDocuments / getDocumentFreq(word))
+    idfs.update({word: idf})
 
+  print("IDF's:")
+  printDict(idfs)
+
+  # Calculate tf-idfs
+  for document in documents:
+    print("Doc #" + str(document.id))
+    for term in document.terms:
+      term.setTfIdf(idfs.get(term.text))
+
+  # Create query as document
+  queryDocument = Document(-1, "Query", queryStr, queryTerms, "query")
+  for term in queryDocument.terms:
+    print("Query term")
+    idfForQueryTerm = idfs.get(term.text)
+    if idfForQueryTerm:
+      term.setTfIdf(idfForQueryTerm)
+    else:
+      term.setTfIdf(0)
+
+  for document in documents:
+    print("Doc #" + str(document.id))
+    document.setTotalTfIdf()
+
+  print("Query Doc")
+  queryDocument.setTotalTfIdf()
+  
+  for document in documents:
+    print("Doc #" + str(document.id))
+    for term in document.terms:
+      term.setSimilarity(document.totalTfIdf)
+
+  for term in queryDocument.terms:
+    print("Query term")
+    term.setSimilarity(queryDocument.totalTfIdf)
+
+  for document in documents:
+    print("Doc #" + str(document.id))
+    document.setTotalSimilarity(queryDocument.terms)
 
 # Main
 
@@ -256,9 +309,14 @@ print("\n\nLoading...\n\n")
 
 readRobotsTxt()
 
-addtoQueue(startingLink)
+# addtoQueue(startingLink)
+addtoQueue("http://s2.smu.edu/~fmoore/textfiles/mary1.txt")
+addtoQueue("http://s2.smu.edu/~fmoore/textfiles/mary2.txt")
+addtoQueue("http://s2.smu.edu/~fmoore/textfiles/mary3.txt")
+addtoQueue("http://s2.smu.edu/~fmoore/textfiles/mary4.txt")
+
 linkIndex = 0
-while(not q.empty() and linkIndex < 100):
+while(not q.empty() and linkIndex < 4):
   processLink(q.get())
   linkIndex += 1
   # time.sleep(5)
