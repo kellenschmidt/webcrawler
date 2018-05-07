@@ -238,12 +238,15 @@ def handleQuery(queryStr):
   stopwordsInQuery = []
   for term in queryTerms:
     if isInvalidTerm(term):
-      print("Error: Invalid query, " + term + " is not a valid query term")
-      return
+      print("Warning: Invalid query, " + term + " is not a valid query term")
+      queryTerms.remove(term)
     elif term in stopwords:
       stopwordsInQuery.append(term)
   
-  if len(stopwordsInQuery) == len(queryTerms):
+  if len(queryTerms) == 0:
+    print("Error: Invalid query, no valid query terms")
+    return
+  elif len(stopwordsInQuery) == len(queryTerms):
     print("Error: Invalid query, all terms are stopwords")
     return
   elif len(stopwordsInQuery) > 0:
@@ -306,6 +309,8 @@ def handleQuery(queryStr):
     document.addTitleBonus(queryDocument.terms)
     # print(document)
 
+  printTopDocuments()
+
 def getDocumentById(id):
   for document in documents:
     if document.id == id:
@@ -326,13 +331,13 @@ def printTopDocuments():
 
   d = collections.Counter(documentResults)
 
-  print("Top Results:\n")
+  if d.most_common(1)[0][1] == 0:
+    print("\nSorry your query returned no results :(\n")
+  else:
+    print("Top Results:\n")
 
-  noResults = True
   for k, v in d.most_common(6):
     if v == 0:
-      if noResults:
-        print("\nSorry your query returned no results :(\n")
       return
     document = getDocumentById(k)
     print("Title: ", document.title)
@@ -340,7 +345,6 @@ def printTopDocuments():
     print("URL: ", document.url)
     print("Score: ", document.totalSimilarity)
     print()
-    noResults = False
 
 # Main
 
@@ -412,4 +416,3 @@ while(userQuery != "stop"):
     print(documents)
   else:
     handleQuery(userQuery)
-    printTopDocuments()

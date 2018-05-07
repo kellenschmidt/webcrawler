@@ -18,7 +18,7 @@ python crawler.py
 
 1. What was changed to support the second half of the project?
 
-- To save the titles of every document I:
+- To save the titles, urls, and cosine similarities of every document I:
   - Create classes for Document and Term to store all of the information about documents and terms
     - Document contains the page's ID, text, title, url, and array of terms
     - Term contains a word's, text, count, tf-idf, and normalized tf-idf with respect to the document it's found in
@@ -34,8 +34,8 @@ python crawler.py
 
 - If the user enters a query which is all stopwords then no search is executed, an error message is shown, and the user is asked to try a new query
 - If the user enters a query which is mix of stopwords and valid terms then a warning is shown and the query is executed with the stopword(s) removed
-- If the user enters a non-word term (ex. 123-abc) then an error message is shown and the user is asked to try a new query
-- If the user enters a word that is not in the dictionary then...
+- If the user enters a non-word term (ex. 123-abc) then an warning message is shown and the query is executed with the non-word term removed
+- If the user enters a word that is not in the corpus then it has no effect on the search results
 
 4. What document/query weighting scheme did you implement?
 
