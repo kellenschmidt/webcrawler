@@ -7,14 +7,6 @@ from document import Document
 from term import Term
 
 q = queue.Queue()
-parsedLinks = {}
-outgoingLinks = {}
-disallowedLinks = {}
-badLinks = {}
-graphicLinks = {}
-processedLinks = []
-duplicateContent = []
-disallowedDirs = []
 graphicExtensions = ["gif", "jpg", "jpeg", "png", "pdf", "xlsx"]
 textExtensions = ["htm", "html", "txt", "php"]
 startingLink = 'http://lyle.smu.edu/~fmoore/'
@@ -23,11 +15,10 @@ headers = {
   "User-Agent": myUserAgent
 }
 documents = []
-documentIndicies = []
-documentTitles = []
 allWords = {}
 stopwords = []
-documentObjects = []
+links = {}
+disallowedDirs = []
 
 # Functions
 
@@ -59,16 +50,11 @@ def getDictionaryWithAddedItem(theDictionary, newItem):
   theDictionary.update({newItem: newCount})
   return theDictionary
 
-def createTokensDict(list):
-  newDict = {}
-  for item in list:
-    newDict = getDictionaryWithAddedItem(newDict, item)
-
-  return newDict
-
 def addtoQueue(newLink):
-  if newLink not in parsedLinks:
-    q.put(newLink)
+  if links.get(newLink):
+    return
+
+  q.put(newLink)
 
 def isRelativeLink(url):
   if url[0:4] != "http":
@@ -114,40 +100,29 @@ def processLink(url):
   if isRelativeLink(url):
     url = urljoin(startingLink, url)
 
-  if url in processedLinks:
+  if links.get(url):
     return
-  else:
-    processedLinks.append(url)
 
   if isDisallowedDir(url):
-    global disallowedLinks
-    disallowedLinks = getDictionaryWithAddedItem(disallowedLinks, url)
+    links.update({url: "disallowed"})
     return
 
   if isOutgoingLink(url):
-    global outgoingLinks
-    outgoingLinks = getDictionaryWithAddedItem(outgoingLinks, url)
+    links.update({url: "outgoing"})
     return
 
-  try:
-    response = requests.get(url, headers=headers, timeout=5.0)
-    statusCode = response.status_code
-  except Exception:
-    global badLinks
-    badLinks = getDictionaryWithAddedItem(badLinks, url)
-    return
+  response = requests.get(url, headers=headers, timeout=5.0)
+  statusCode = response.status_code
 
   if statusCode != 200:
-    badLinks = getDictionaryWithAddedItem(badLinks, url)
+    links.update({url: "bad"})
     return
 
   if isGraphicLink(url):
-    global graphicLinks
-    graphicLinks = getDictionaryWithAddedItem(graphicLinks, url)
+    links.update({url: "graphic"})
     return
 
-  global parsedLinks
-  parsedLinks = getDictionaryWithAddedItem(parsedLinks, url)
+  links.update({url: "parsed"})
   plain = response.text
 
   ogSoup = BeautifulSoup(plain, "html.parser")
@@ -172,19 +147,16 @@ def processLink(url):
     addtoQueue(urljoin(url, linkSrc))
 
   plainText = soup.get_text().lower()
-  duplicateTuplesList = [item for item in documents if item[1] == plainText]
-  for tuple in duplicateTuplesList:
-    duplicateContent.append((url, tuple[0]))
-  if len(duplicateTuplesList) == 0:
-    documents.append((url, plainText))
+  for document in documents:
+    if document.text == plainText:
+      links.update({url: "duplicate"})
+      break
 
   unfilteredTokens = plainText.split()
   withoutNonwords = removeNonwords(unfilteredTokens)
   filteredTokens = diff(withoutNonwords, stopwords)
 
-  linkIndex = len(parsedLinks)
-  documentIndicies.append(linkIndex)
-  docTitle = ""
+  linkIndex = len(documents)
   if(ogSoup.title):
     docTitle = ogSoup.title.string
   else:
@@ -194,12 +166,11 @@ def processLink(url):
     global allWords
     allWords = getDictionaryWithAddedItem(allWords, token)
 
-  newDocumentObject = Document(linkIndex, docTitle, plainText, filteredTokens, url)
-  documentObjects.append(newDocumentObject)
+  documents.append(Document(linkIndex, docTitle, plainText, filteredTokens, url))
 
 def getDocumentFreq(word):
   freq = 0
-  for document in documentObjects:
+  for document in documents:
     for term in document.terms:
         if term.text == word:
           freq = freq + 1
@@ -210,7 +181,7 @@ def getDocumentFreq(word):
 def printMatrix():
   print("Term-Document Frequency Matrix:")
   print("Word\t\t\t\t\t\t", end="")
-  for document in documentObjects:
+  for document in documents:
     print("Doc #", document.id, sep="", end="\t")
   for word in allWords:
     print("\n", word, sep="", end='\t')
@@ -224,7 +195,7 @@ def printMatrix():
       print("", end="\t\t")
     elif len(word) < 40:
       print("", end="\t")
-    for document in documentObjects:
+    for document in documents:
       termFound = False
       for term in document.terms:
         if term.text == word:
@@ -243,6 +214,11 @@ def printTopTwenty():
     if len(k) < 8:
       print("\t", end="")
     print(v, getDocumentFreq(k), sep="\t\t")
+
+def printLinks(type):
+  for key, value in links.items():
+    if value == type:
+      print(key)
 
 def isInvalidTerm(term):
   if term[len(term)-1].isalnum() and term[0].isalpha():
@@ -282,7 +258,7 @@ readRobotsTxt()
 
 addtoQueue(startingLink)
 linkIndex = 0
-while(not q.empty() and linkIndex < 109):
+while(not q.empty() and linkIndex < 100):
   processLink(q.get())
   linkIndex += 1
   # time.sleep(5)
@@ -312,21 +288,17 @@ while(userQuery != "stop"):
     break
   elif userQuery == "stats":
     print("Bad links:")
-    printDict(badLinks)
+    printLinks("bad")
     print("\nOutgoing links:")
-    printDict(outgoingLinks)
+    printLinks("outgoing")
     print("\nGraphic Links:")
-    printDict(graphicLinks)
+    printLinks("graphic")
     print("\nIgnored Links:")
-    printDict(disallowedLinks)
+    printLinks("disallowed")
     print("\nParsed links:")
-    printDict(parsedLinks)
-    print("\nTitles:")
-    printList(documentTitles)
-    # print("\nAll links: ")
-    # printList(processedLinks)
+    printLinks("parsed")
     print("\nDuplicate content: ")
-    printTupleList(duplicateContent)
+    printLinks("duplicate")
   elif userQuery == "top 20":
     printTopTwenty()
   elif userQuery == "matrix":
@@ -340,7 +312,7 @@ while(userQuery != "stop"):
       while(not q.empty()):
         print(q.get())
   elif userQuery == "obj":
-    print(documentObjects)
+    print(documents)
   else:
     handleQuery(userQuery)
     print("\nSorry, no results :(")
