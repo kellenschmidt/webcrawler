@@ -43,7 +43,7 @@ class Document:
       sumOfSquares += term.tfIdf * term.tfIdf
 
     self.totalTfIdf = math.sqrt(sumOfSquares)
-    print("Total tf-idf: " + str(self.totalTfIdf))
+    # print("Total tf-idf: " + str(self.totalTfIdf))
 
   def setTotalSimilarity(self, termsArray):
     sumOfProducts = 0
@@ -56,12 +56,12 @@ class Document:
           break
 
     self.totalSimilarity = sumOfProducts
-    print("Total similarity: " + str(self.totalSimilarity))
+    # print("Total similarity: " + str(self.totalSimilarity))
 
   def addTitleBonus(self, queryTerms):
     for term in queryTerms:
       if self.title.lower().find(term.text) != -1:
-        print("Bonus for doc #", self.id)
+        # print("Bonus for doc #", self.id)
         self.totalSimilarity += 0.25
         return
 

@@ -252,31 +252,31 @@ def handleQuery(queryStr):
     queryTerms = diff(queryTerms, stopwordsInQuery)
 
   # Calculate all cosine similarities
-  print("\n\nEvaluating query...\n")
-  printList(queryTerms)
+  # print("\n\nEvaluating query...\n")
+  # printList(queryTerms)
 
   # Calculate IDFs
   idfs = {}
   numDocuments = float(len(documents))
-  print("numDocuments: " + str(numDocuments))
+  # print("numDocuments: " + str(numDocuments))
   for word in allWords:
-    print("DocFreq: " + str(getDocumentFreq(word)))
+    # print("DocFreq: " + str(getDocumentFreq(word)))
     idf = math.log10(numDocuments / getDocumentFreq(word))
     idfs.update({word: idf})
 
-  print("IDF's:")
-  printDict(idfs)
+  # print("IDF's:")
+  # printDict(idfs)
 
   # Calculate tf-idfs
   for document in documents:
-    print("Doc #" + str(document.id))
+    # print("Doc #" + str(document.id))
     for term in document.terms:
       term.setTfIdf(idfs.get(term.text))
 
   # Create query as document
   queryDocument = Document(-1, "Query", queryStr, queryTerms, "query")
   for term in queryDocument.terms:
-    print("Query term")
+    # print("Query term")
     idfForQueryTerm = idfs.get(term.text)
     if idfForQueryTerm:
       term.setTfIdf(idfForQueryTerm)
@@ -284,26 +284,62 @@ def handleQuery(queryStr):
       term.setTfIdf(0)
 
   for document in documents:
-    print("Doc #" + str(document.id))
+    # print("Doc #" + str(document.id))
     document.setTotalTfIdf()
 
-  print("Query Doc")
+  # print("Query Doc")
   queryDocument.setTotalTfIdf()
   
   for document in documents:
-    print("Doc #" + str(document.id))
+    # print("Doc #" + str(document.id))
     for term in document.terms:
       term.setSimilarity(document.totalTfIdf)
 
   for term in queryDocument.terms:
-    print("Query term")
+    # print("Query term")
     term.setSimilarity(queryDocument.totalTfIdf)
 
   for document in documents:
-    print("Doc #" + str(document.id))
+    # print("Doc #" + str(document.id))
     document.setTotalSimilarity(queryDocument.terms)
     document.addTitleBonus(queryDocument.terms)
-    print(document)
+    # print(document)
+
+def getDocumentById(id):
+  for document in documents:
+    if document.id == id:
+      return document
+  
+  return Document()
+
+def getTextSummaryString(textStr):
+  textAsTokens = textStr.split()[:20]
+  showElipsis = "..." if len(textAsTokens) > 20 else ""
+  return ' '.join(textAsTokens) + showElipsis
+
+
+def printTopDocuments():
+  documentResults = {}
+  for document in documents:
+    documentResults.update({document.id: document.totalSimilarity})
+
+  d = collections.Counter(documentResults)
+
+  print("Top Results:\n")
+
+  noResults = True
+  for k, v in d.most_common(6):
+    if v == 0:
+      if noResults:
+        print("\nSorry your query returned no results :(\n")
+      return
+    document = getDocumentById(k)
+    print("Title: ", document.title)
+    print("Text: ", getTextSummaryString(document.text))
+    print("URL: ", document.url)
+    print("Score: ", document.totalSimilarity)
+    print()
+    noResults = False
 
 # Main
 
@@ -375,4 +411,4 @@ while(userQuery != "stop"):
     print(documents)
   else:
     handleQuery(userQuery)
-    print("\nSorry, no results :(")
+    printTopDocuments()

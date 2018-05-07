@@ -21,11 +21,11 @@ class Term:
   def setTfIdf(self, idf):
     tf = 1 + math.log10(self.count)
     self.tfIdf = tf * idf
-    print(self.text + ": tf-idf = " + str(self.tfIdf))
+    # print(self.text + ": tf-idf = " + str(self.tfIdf))
 
   def setSimilarity(self, totalTfIdf):
     if totalTfIdf != 0:
       self.similarity = self.tfIdf / totalTfIdf
     else:
       self.similarity = 0
-    print(self.text + ": similarity = " + str(self.similarity))
+    # print(self.text + ": similarity = " + str(self.similarity))
