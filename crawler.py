@@ -1,4 +1,4 @@
-import requests, queue, sys, re, collections, time, math, numpy
+import requests, queue, sys, re, collections, time, math, numpy, string
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
 from sklearn.cluster import KMeans
@@ -148,12 +148,18 @@ def processLink(url):
     addtoQueue(urljoin(url, linkSrc))
 
   plainText = soup.get_text().lower()
+  # plainOlText = soup.get_text()
+  # plainText = plainOlText.lower()
   for document in documents:
     if document.text == plainText:
       links.update({url: "duplicate"})
       return
 
-  unfilteredTokens = plainText.split()
+  # re.sub(r'[^A-Za-z0-9]+', '', plainText)
+  table = str.maketrans({key: None for key in string.punctuation})
+  removedSpecialChars = plainText.translate(table)
+  unfilteredTokens = removedSpecialChars.split()
+  # unfilteredTokens = plainText.split()  
   withoutNonwords = removeNonwords(unfilteredTokens)
   filteredTokens = diff(withoutNonwords, stopwords)
 
@@ -256,7 +262,7 @@ def handleQuery(queryStr):
   stopwordsInQuery = []
   for term in queryTerms:
     if isInvalidTerm(term):
-      print("Warning: Invalid query, " + term + " is not a valid query term")
+      print("Warning: Invalid query, \"" + term + "\" is not a valid query term")
       queryTerms.remove(term)
     elif term in stopwords:
       stopwordsInQuery.append(term)
@@ -338,6 +344,7 @@ def handleCluster():
 
   vectorizer = TfidfVectorizer()
   tfidfMatrix = vectorizer.fit_transform(corpus)
+
   kmeans = KMeans(n_clusters=5).fit(tfidfMatrix)
   labels = kmeans.labels_
 
@@ -348,13 +355,13 @@ def handleCluster():
       if clusterIndex == label:
         doc_ids_in_cluster.append(labelIndex)
 
-    tfidfsForCluster = tfidfMatrix[doc_ids_in_cluster]
+    countsForCluster = countMatrix[doc_ids_in_cluster]
 
     print("Cluster #", clusterIndex+1 , sep="")
 
     distancesFromCenter = []
-    for tfidfColumn in tfidfsForCluster:
-      distancesFromCenter.append(getEuclideanDistance(kmeans.cluster_centers_[0], tfidfColumn))      
+    for countsColumn in countsForCluster:
+      distancesFromCenter.append(getEuclideanDistance(kmeans.cluster_centers_[0], countsColumn))      
 
     minVal, minIndex = min((val, idx) for(idx, val) in enumerate(distancesFromCenter))
     
@@ -380,10 +387,6 @@ def handleCluster():
       print("Similarity:", similarity)
         
     print()
-
-
-
-
 
 def printTopDocuments():
   documentResults = {}
@@ -474,7 +477,7 @@ while(userQuery != "stop"):
         print(q.get())
   elif userQuery == "obj":
     print(documents)
-  elif userQuery == "c":
+  elif userQuery == "cluster":
     handleCluster()
   else:
     handleQuery(userQuery)
