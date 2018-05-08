@@ -2,7 +2,8 @@ import requests, queue, sys, re, collections, time, math, numpy
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
 from sklearn.cluster import KMeans
-from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
 from print import *
 from document import Document
 
@@ -332,6 +333,9 @@ def handleCluster():
   for document in documents:
     corpus.append(document.filteredText)  
 
+  countVectorizer = CountVectorizer()
+  countMatrix = countVectorizer.fit_transform(corpus)
+
   vectorizer = TfidfVectorizer()
   tfidfMatrix = vectorizer.fit_transform(corpus)
   kmeans = KMeans(n_clusters=5).fit(tfidfMatrix)
@@ -347,23 +351,33 @@ def handleCluster():
     tfidfsForCluster = tfidfMatrix[doc_ids_in_cluster]
 
     print("Cluster #", clusterIndex+1 , sep="")
-    # print(tfidfsForCluster)
 
     distancesFromCenter = []
     for tfidfColumn in tfidfsForCluster:
-      distancesFromCenter.append(getEuclideanDistance(kmeans.cluster_centers_[0], tfidfColumn))
+      distancesFromCenter.append(getEuclideanDistance(kmeans.cluster_centers_[0], tfidfColumn))      
 
     minVal, minIndex = min((val, idx) for(idx, val) in enumerate(distancesFromCenter))
     
     print("  Leader:\n-----------")
-    leaderDoc = getDocumentById(doc_ids_in_cluster[minIndex])
+    leaderDocId = doc_ids_in_cluster[minIndex]
+    leaderDoc = getDocumentById(leaderDocId)
     printDocInfo(leaderDoc)
     print("  Followers:\n--------------")
-    for index, doc_id in enumerate(doc_ids_in_cluster):
+    followerTuples = []
+    for index, docId in enumerate(doc_ids_in_cluster):
       if index != minIndex:
-        followerDoc = getDocumentById(doc_id)
-        print("Id:", doc_id)
-        printDocInfo(followerDoc)
+        similarity = cosine_similarity(countMatrix[leaderDocId], countMatrix[docId])[0][0]
+        followerTuples.append((docId, similarity))
+
+    sortedFollowerTuples = sorted(followerTuples, key=lambda x: x[1], reverse=True)
+
+    for followerTuple in sortedFollowerTuples:
+      docId = followerTuple[0]
+      similarity = followerTuple[1]
+      followerDoc = getDocumentById(docId)
+      print("Id:", docId)
+      printDocInfo(followerDoc)
+      print("Similarity:", similarity)
         
     print()
 
