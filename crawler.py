@@ -1,10 +1,10 @@
-import requests, queue, sys, re, collections, time, math
+import requests, queue, sys, re, collections, time, math, numpy
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
-
+from sklearn.cluster import KMeans
+from sklearn.feature_extraction.text import TfidfVectorizer
 from print import *
 from document import Document
-# from term import Term
 
 q = queue.Queue()
 graphicExtensions = ["gif", "jpg", "jpeg", "png", "pdf", "xlsx"]
@@ -233,6 +233,23 @@ def isInvalidTerm(term):
   else:
     return True
 
+def getDocumentById(id):
+  for document in documents:
+    if document.id == id:
+      return document
+  
+  return Document()
+
+def getTextSummaryString(textStr):
+  textAsTokens = textStr.split()
+  showElipsis = "..." if len(textAsTokens) > 20 else ""
+  return ' '.join(textAsTokens[:20]) + showElipsis
+
+def printDocInfo(document):
+  print("Title: ", document.title)
+  print("Text: ", getTextSummaryString(document.text))
+  print("URL: ", document.url)
+
 def handleQuery(queryStr):
   queryTerms = queryStr.split()
   stopwordsInQuery = []
@@ -254,10 +271,6 @@ def handleQuery(queryStr):
     printList(stopwordsInQuery)
     print()
     queryTerms = diff(queryTerms, stopwordsInQuery)
-
-  # Calculate all cosine similarities
-  # print("\n\nEvaluating query...\n")
-  # printList(queryTerms)
 
   # Calculate IDFs
   idfs = {}
@@ -311,17 +324,51 @@ def handleQuery(queryStr):
 
   printTopDocuments()
 
-def getDocumentById(id):
-  for document in documents:
-    if document.id == id:
-      return document
-  
-  return Document()
+def getEuclideanDistance(vector1, vector2):
+  return numpy.linalg.norm(vector1-vector2)
 
-def getTextSummaryString(textStr):
-  textAsTokens = textStr.split()
-  showElipsis = "..." if len(textAsTokens) > 20 else ""
-  return ' '.join(textAsTokens[:20]) + showElipsis
+def handleCluster():
+  corpus = []
+  for document in documents:
+    corpus.append(document.filteredText)  
+
+  vectorizer = TfidfVectorizer()
+  tfidfMatrix = vectorizer.fit_transform(corpus)
+  kmeans = KMeans(n_clusters=5).fit(tfidfMatrix)
+  labels = kmeans.labels_
+
+  for clusterIndex in range(0, 5):
+    doc_ids_in_cluster = []
+
+    for labelIndex, label in enumerate(labels):
+      if clusterIndex == label:
+        doc_ids_in_cluster.append(labelIndex)
+
+    tfidfsForCluster = tfidfMatrix[doc_ids_in_cluster]
+
+    print("Cluster #", clusterIndex+1 , sep="")
+    # print(tfidfsForCluster)
+
+    distancesFromCenter = []
+    for tfidfColumn in tfidfsForCluster:
+      distancesFromCenter.append(getEuclideanDistance(kmeans.cluster_centers_[0], tfidfColumn))
+
+    minVal, minIndex = min((val, idx) for(idx, val) in enumerate(distancesFromCenter))
+    
+    print("  Leader:\n-----------")
+    leaderDoc = getDocumentById(doc_ids_in_cluster[minIndex])
+    printDocInfo(leaderDoc)
+    print("  Followers:\n--------------")
+    for index, doc_id in enumerate(doc_ids_in_cluster):
+      if index != minIndex:
+        followerDoc = getDocumentById(doc_id)
+        print("Id:", doc_id)
+        printDocInfo(followerDoc)
+        
+    print()
+
+
+
 
 
 def printTopDocuments():
@@ -340,9 +387,7 @@ def printTopDocuments():
     if v == 0:
       return
     document = getDocumentById(k)
-    print("Title: ", document.title)
-    print("Text: ", getTextSummaryString(document.text))
-    print("URL: ", document.url)
+    printDocInfo(document)
     print("Score: ", document.totalSimilarity)
     print()
 
@@ -379,6 +424,7 @@ while(userQuery != "stop"):
   print("\"Top 20\" - View the top 20 most common words")
   print("\"Matrix\" - Display the term-document frequency matrix")
   print("\"Status\" - Determine whether the whole site has been parsed or not")
+  print("\"Cluster\" - View the clustering of the documents")
   print("\nEnter your query: " , end='')
   userQuery = input()
   userQuery = userQuery.lower()
@@ -414,5 +460,7 @@ while(userQuery != "stop"):
         print(q.get())
   elif userQuery == "obj":
     print(documents)
+  elif userQuery == "c":
+    handleCluster()
   else:
     handleQuery(userQuery)

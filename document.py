@@ -3,16 +3,17 @@ from term import Term
 
 class Document:
 
-  def __init__(self, id="", title="", text="", terms=[], url=""):
+  def __init__(self, id="", title="", text="", tokens=[], url=""):
     self.id = id
     self.title = title
     self.text = text
+    self.filteredText = " ".join(tokens)
     self.terms = []
     self.url = url
     self.totalTfIdf = 0.0
     self.totalSimilarity = 0.0
 
-    for termText in terms:
+    for termText in tokens:
       self.addToTerms(termText)
 
   def getDocumentFrequency(self, word):
