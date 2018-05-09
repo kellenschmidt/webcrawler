@@ -10,25 +10,26 @@
 python crawler.py
 ```
 
-`depth`: automatically set to 109 (enough to crawl entire website)
-
-`stopwords_file`: automatically set to `/stopwords.txt`
-
 ## Project 2 Responses
 
 1. What was changed to support the second half of the project?
 
 - To save the titles, urls, and cosine similarities of every document I:
   - Create classes for Document and Term to store all of the information about documents and terms
-    - Document contains the page's ID, text, title, url, and array of terms
-    - Term contains a word's, text, count, tf-idf, and normalized tf-idf with respect to the document it's found in
-  - Restructured the application to save and re
+    - Document contains the page's ID, text, title, url, array of terms, total tf-idf, and total similarity
+    - Term contains a word's, text, count, tf-idf, and similarity with respect to the document it's found in
+  - Restructured the application to save and read data from an array of Document objects
   - Added added logic to read the title html element if it exists or the page url if it doesn't and set that to the page title
-  - ...
 
 2. How did you determine the leaders? Do you agree with the clustering? Is 5 reasonable?
 
-- ...
+- After the documents were clustered, the leaders of each cluster were determined by the calculating the document with the minimum euclidean distance to the centroid coordinates of each cluster
+- The followers for each cluster were ordered by their cosine similarity to the leader of their cluster
+- My clustering results are correct because:
+    - Documents which contain the same content (building1.txt and building2.txt) were clustered together and the follower's similarity score to the leader was 1.0 which was to be expected because a similarity score of 1.0 indicates a perfect match
+    - Other similar files such as the "Mary" files or the "Basketball" files were clustered together
+    - The documents within a cluster were similar, and documents from different clusters were dissimilar
+- Setting the number of clusters to 5 was reasonable because it prevented the clusters from being too large or too small and becoming trivial. It also resulted in clusters that were had high intra-cluster similarity and low inter-cluster similarity
 
 3. What happens if a user enters a word that is not in the dictionary? What happens if a user enters a stop word?
 
@@ -43,33 +44,13 @@ python crawler.py
 
 5. Explain why you believe the results are correct
 
-- ...
+- My query search results were correct because:
+    - The only documents that were returned for each query were those which contained at least one of the query terms and they were ordered by similarity score
+    - When a query was made which matched a document exactly (such as "buildingone buildingtwo buildingthree") then the simiarity score of the returned results was 1.0 for each of identically matching documents
+    - Also similarity scores were accurate because I recreated the "Mary had a little lamb" example from the sample excel document and the similarity scores that the program reported matched the output of the excel document
+    - When a query search term was found in the title of a document, 0.25 was added to the similarity score, which is why some results had a similarity score of slighly higher than 1.0
 
-## Implementation Details
-
-### Data structures
-- `index`: Main index is a dictionary of dictionaries
-  - The key is the unique document index
-  - The value for each key is a dictionary of token-frequency pairs
-  - Example:
-  ```
-  {
-    0: {
-      test: 4,
-      computer: 7,
-      apples: 1,
-      oranges: 3,
-    },
-    1: {
-      peaches: 3,
-      coconuts: 9,
-      lemons: 2
-    }
-  }
-  ```
-- `documents`: 
-- `allWords`: Dictionary of every word that has been parsed, associated with its collection frequency
-- `q`: Queue of urls that have been found and are candidates for crawling
+## Other Details
 
 ### Key properties
 
@@ -87,6 +68,7 @@ python crawler.py
 
 ### Special features
 
+- Properly parses and applies the rules found in the robots.txt file
 - The program properly handles relative links when found in the documents
 - A custom User-Agent for the webcrawler is sent with every HTTP request
 - Correctly categorizes: Broken links, Outgoing links, Graphic links, Disallowed links, Duplicate links, and Valid(Parsable) links
